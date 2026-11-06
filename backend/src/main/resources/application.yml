@@ -12,14 +12,12 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
 
 server:
   port: 8080
 
-# JWT configuration
 jwt:
   secret: your-secret-key-change-in-production
-  expiration: 86400000 # 24h en ms
+  expiration: 86400000
