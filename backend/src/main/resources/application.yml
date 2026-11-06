@@ -3,9 +3,9 @@ spring:
     name: shopmind-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/shopmind
-    username: shopmind
-    password: shopmind
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shopmind}
+    username: ${SPRING_DATASOURCE_USERNAME:shopmind}
+    password: ${SPRING_DATASOURCE_PASSWORD:shopmind}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -14,10 +14,13 @@ spring:
     show-sql: false
     open-in-view: false
 
+  devtools:
+    restart:
+      enabled: ${SPRING_DEVTOOLS_RESTART_ENABLED:false}
 
 server:
   port: 8080
 
 jwt:
-  secret: your-secret-key-change-in-production
-  expiration: 86400000
+  secret: ${JWT_SECRET:your-secret-key-change-in-production}
+  expiration: ${JWT_EXPIRATION:86400000}

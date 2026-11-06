@@ -1,9 +1,8 @@
-version: '3.8'
 
 services:
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: shopmind
       POSTGRES_USER: shopmind
@@ -12,30 +11,51 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopmind -d shopmind"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shopmind
       SPRING_DATASOURCE_USERNAME: shopmind
       SPRING_DATASOURCE_PASSWORD: shopmind
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      JWT_SECRET: change-me-in-production-use-a-long-random-string-here
+      JWT_EXPIRATION: 86400000
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/pom.xml:/app/pom.xml
 
   ai-service:
     build: ./ai-service
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
     build: ./frontend
