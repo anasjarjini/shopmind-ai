@@ -41,7 +41,7 @@ services:
       SPRING_DATASOURCE_USERNAME: shopmind
       SPRING_DATASOURCE_PASSWORD: shopmind
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
-      JWT_SECRET: change-me-in-production-use-a-long-random-string-here
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       JWT_EXPIRATION: 86400000
     volumes:
       - ./backend/src:/app/src
