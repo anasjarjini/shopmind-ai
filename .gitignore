@@ -32,3 +32,6 @@ Thumbs.db
 
 # ── Docker ──
 *.log
+
+# Configuration locale Spring Boot
+/backend/src/main/resources/application-local.yml
