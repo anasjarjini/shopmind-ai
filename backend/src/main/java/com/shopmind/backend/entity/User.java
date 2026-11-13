@@ -37,9 +37,15 @@ public class User implements UserDetails {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    private String phone;
+    private String city;
+    private String address;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -86,4 +92,5 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
 }
