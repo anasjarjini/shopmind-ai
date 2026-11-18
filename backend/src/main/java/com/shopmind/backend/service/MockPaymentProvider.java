@@ -1,4 +1,4 @@
-package com.shopmind.payment;
+package com.shopmind.backend.service;
 
 import org.springframework.stereotype.Component;
 
@@ -14,7 +14,7 @@ public class MockPaymentProvider implements PaymentProvider {
     }
 
     @Override
-    public Intent createIntent(Long orderId, BigDecimal amount) {
+    public Intent createIntent(UUID orderId, BigDecimal amount) {
         return new Intent("mock_" + UUID.randomUUID(), null);
     }
 }

@@ -1,5 +1,7 @@
-package com.shopmind.payment.dto;
+package com.shopmind.backend.dto;
 
 import jakarta.validation.constraints.NotNull;
 
-public record CreatePaymentRequest(@NotNull Long orderId) {}
+import java.util.UUID;
+
+public record CreatePaymentRequest(@NotNull UUID orderId) {}

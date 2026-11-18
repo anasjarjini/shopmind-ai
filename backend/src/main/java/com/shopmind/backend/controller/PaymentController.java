@@ -1,29 +1,34 @@
-package com.shopmind.payment;
+package com.shopmind.backend.controller;
 
-import com.shopmind.auth.AuthPrincipal;
-import com.shopmind.payment.dto.CreatePaymentRequest;
-import com.shopmind.payment.dto.PaymentResponse;
-import com.shopmind.payment.dto.WebhookRequest;
+import com.shopmind.backend.dto.CreatePaymentRequest;
+import com.shopmind.backend.dto.PaymentResponse;
+import com.shopmind.backend.dto.WebhookRequest;
+import com.shopmind.backend.entity.User;
+import com.shopmind.backend.exception.UnauthorizedException;
+import com.shopmind.backend.service.PaymentService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
 
-    private final PaymentService service;
-
-    public PaymentController(PaymentService service) {
-        this.service = service;
-    }
+    @Autowired
+    private PaymentService service;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public PaymentResponse create(@AuthenticationPrincipal AuthPrincipal p,
+    public PaymentResponse create(@AuthenticationPrincipal User user,
                                   @Valid @RequestBody CreatePaymentRequest req) {
-        return service.initiate(p.id(), req.orderId());
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        return service.initiate(user.getId(), req.orderId());
     }
 
     /** Public URL, protected by the X-Webhook-Secret header. */
@@ -37,8 +42,11 @@ public class PaymentController {
 
     /** Dev only: simulate the provider (success=true or false). */
     @PostMapping("/{id}/mock-confirm")
-    public PaymentResponse mockConfirm(@AuthenticationPrincipal AuthPrincipal p, @PathVariable Long id,
+    public PaymentResponse mockConfirm(@AuthenticationPrincipal User user, @PathVariable UUID id,
                                        @RequestParam(defaultValue = "true") boolean success) {
-        return service.confirmMock(p.id(), id, success);
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        return service.confirmMock(user.getId(), id, success);
     }
 }

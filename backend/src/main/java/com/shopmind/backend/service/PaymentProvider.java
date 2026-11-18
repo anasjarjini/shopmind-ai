@@ -1,6 +1,7 @@
-package com.shopmind.payment;
+package com.shopmind.backend.service;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /** Add a StripePaymentProvider later without touching PaymentService. */
 public interface PaymentProvider {
@@ -9,5 +10,5 @@ public interface PaymentProvider {
 
     String name();
 
-    Intent createIntent(Long orderId, BigDecimal amount);
+    Intent createIntent(UUID orderId, BigDecimal amount);
 }

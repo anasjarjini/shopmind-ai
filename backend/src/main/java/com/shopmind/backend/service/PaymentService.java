@@ -1,40 +1,42 @@
-package com.shopmind.payment;
+package com.shopmind.backend.service;
 
-import com.shopmind.common.exception.BadRequestException;
-import com.shopmind.common.exception.NotFoundException;
-import com.shopmind.common.exception.UnauthorizedException;
-import com.shopmind.order.OrderService;
-import com.shopmind.order.OrderSummary;
-import com.shopmind.payment.dto.PaymentResponse;
+import com.shopmind.backend.dto.PaymentResponse;
+import com.shopmind.backend.entity.OrderSummary;
+import com.shopmind.backend.entity.Payment;
+import com.shopmind.backend.entity.PaymentStatus;
+import com.shopmind.backend.exception.NotFoundException;
+import com.shopmind.backend.exception.UnauthorizedException;
+import com.shopmind.backend.repository.PaymentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.UUID;
 
 @Service
 public class PaymentService {
 
-    private final PaymentRepository payments;
-    private final OrderService orders;
-    private final PaymentProvider provider;
-    private final String webhookSecret;
-    private final boolean mockEnabled;
+    @Autowired
+    private PaymentRepository payments;
 
-    public PaymentService(PaymentRepository payments, OrderService orders, PaymentProvider provider,
-                          @Value("${app.payment.webhook-secret}") String webhookSecret,
-                          @Value("${app.payment.mock-enabled}") boolean mockEnabled) {
-        this.payments = payments;
-        this.orders = orders;
-        this.provider = provider;
-        this.webhookSecret = webhookSecret;
-        this.mockEnabled = mockEnabled;
-    }
+    @Autowired
+    private OrderService orders;
+
+    @Autowired
+    private PaymentProvider provider;
+
+    @Value("${payment.webhook-secret:${app.payment.webhook-secret:shopmind-webhook-secret-dev}}")
+    private String webhookSecret;
+
+    @Value("${payment.mock-enabled:${app.payment.mock-enabled:true}}")
+    private boolean mockEnabled;
 
     /** Starts a payment for one of the user's pending orders. The amount comes from the order, never from the client. */
     @Transactional
-    public PaymentResponse initiate(Long userId, Long orderId) {
+    public PaymentResponse initiate(UUID userId, UUID orderId) {
         OrderSummary order = orders.getPayable(userId, orderId);
         PaymentProvider.Intent intent = provider.createIntent(order.id(), order.total());
 
@@ -62,13 +64,12 @@ public class PaymentService {
                 orders.markPaid(p.getOrderId());
             }
             case FAILED -> p.setStatus(PaymentStatus.FAILED);
-            default -> throw new BadRequestException("Unsupported webhook status " + result);
+            default -> throw new IllegalArgumentException("Unsupported webhook status " + result);
         }
     }
 
-    /** Development helper: the owner simulates the provider's answer. Disabled when mock-enabled=false. */
     @Transactional
-    public PaymentResponse confirmMock(Long userId, Long paymentId, boolean success) {
+    public PaymentResponse confirmMock(UUID userId, UUID paymentId, boolean success) {
         if (!mockEnabled) {
             throw new NotFoundException("Not found");
         }

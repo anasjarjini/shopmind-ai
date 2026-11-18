@@ -1,6 +1,6 @@
-package com.shopmind.payment.dto;
+package com.shopmind.backend.dto;
 
-import com.shopmind.payment.PaymentStatus;
+import com.shopmind.backend.entity.PaymentStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

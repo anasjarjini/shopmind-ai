@@ -1,4 +1,4 @@
-package com.shopmind.payment;
+package com.shopmind.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "payments")
@@ -16,11 +17,11 @@ import java.time.Instant;
 public class Payment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    private UUID orderId;
 
     @Column(nullable = false, length = 30)
     private String provider;
