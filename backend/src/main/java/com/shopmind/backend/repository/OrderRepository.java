@@ -1,5 +1,6 @@
-package com.shopmind.order;
+package com.shopmind.backend.repository;
 
+import com.shopmind.backend.entity.ShopOrder;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,15 +10,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.UUID;
 
-public interface OrderRepository extends JpaRepository<ShopOrder, Long> {
+public interface OrderRepository extends JpaRepository<ShopOrder, UUID> {
 
-    Page<ShopOrder> findByUserId(Long userId, Pageable pageable);
+    Page<ShopOrder> findByUserId(UUID userId, Pageable pageable);
 
-    Optional<ShopOrder> findByIdAndUserId(Long id, Long userId);
+    Optional<ShopOrder> findByIdAndUserId(UUID id, UUID userId);
 
     /** Row lock for status changes (payment webhooks can arrive in parallel). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from ShopOrder o where o.id = :id")
-    Optional<ShopOrder> findByIdForUpdate(@Param("id") Long id);
+    Optional<ShopOrder> findByIdForUpdate(@Param("id") UUID id);
 }

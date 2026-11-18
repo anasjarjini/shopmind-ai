@@ -1,4 +1,4 @@
-package com.shopmind.order;
+package com.shopmind.backend.entity;
 
 public enum OrderStatus {
     PENDING, PAID, SHIPPED, DELIVERED, CANCELLED, REFUNDED, RETURNED;

@@ -1,14 +1,13 @@
-package com.shopmind.order;
+package com.shopmind.backend.service;
 
-import com.shopmind.cart.CartService;
-import com.shopmind.common.exception.BadRequestException;
-import com.shopmind.common.exception.ConflictException;
-import com.shopmind.common.exception.NotFoundException;
-import com.shopmind.event.EventService;
-import com.shopmind.event.EventType;
-import com.shopmind.order.dto.OrderItemResponse;
-import com.shopmind.order.dto.OrderResponse;
-import com.shopmind.product.ProductService;
+import com.shopmind.backend.dto.OrderItemResponse;
+import com.shopmind.backend.dto.OrderResponse;
+import com.shopmind.backend.entity.*;
+import com.shopmind.backend.exception.ConflictException;
+import com.shopmind.backend.exception.NotFoundException;
+import com.shopmind.backend.repository.OrderRepository;
+import com.shopmind.backend.repository.ProductRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -17,10 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class OrderService {
@@ -28,28 +26,25 @@ public class OrderService {
     /** Reasons a customer may give when cancelling a not-yet-paid order. */
     private static final Set<CancelReason> CUSTOMER_REASONS = Set.of(CancelReason.CHANGED_MIND, CancelReason.PAYMENT_FAILED);
 
-    private final OrderRepository orders;
-    private final CartService cart;
-    private final ProductService products;
-    private final EventService events;
+    @Autowired
+    private OrderRepository orders;
 
-    public OrderService(OrderRepository orders, CartService cart, ProductService products, EventService events) {
-        this.orders = orders;
-        this.cart = cart;
-        this.products = products;
-        this.events = events;
-    }
+    @Autowired
+    private CartService cart;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     // ---------------- customer ----------------
 
-    /** Cart -> order. Stock is reduced under row locks in the same transaction. */
+
     @Transactional
-    public OrderResponse checkout(Long userId) {
+    public OrderResponse checkout(UUID userId) {
         List<CartService.CartLine> lines = cart.checkoutLines(userId).stream()
                 .sorted(Comparator.comparing((CartService.CartLine l) -> l.product().getId()))  // stable lock order
                 .toList();
         if (lines.isEmpty()) {
-            throw new BadRequestException("Cart is empty");
+            throw new IllegalArgumentException("Cart is empty");
         }
 
         ShopOrder order = new ShopOrder();
@@ -57,7 +52,7 @@ public class OrderService {
         order.setStatus(OrderStatus.PENDING);
         BigDecimal total = BigDecimal.ZERO;
         for (CartService.CartLine line : lines) {
-            products.decreaseStock(line.product().getId(), line.quantity());
+            decreaseStock(line.product(), line.quantity());
             OrderItem item = new OrderItem();
             item.setOrder(order);
             item.setProduct(line.product());
@@ -73,21 +68,21 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<OrderResponse> list(Long userId, int page, int size) {
+    public Page<OrderResponse> list(UUID userId, int page, int size) {
         int safeSize = Math.min(Math.max(size, 1), 50);
         return orders.findByUserId(userId, PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public OrderResponse get(Long userId, Long orderId) {
+    public OrderResponse get(UUID userId, UUID orderId) {
         return toResponse(orders.findByIdAndUserId(orderId, userId)
                 .orElseThrow(() -> new NotFoundException("Order " + orderId + " not found")));
     }
 
     /** Customers can cancel only orders that are not paid yet. After payment, use a refund. */
     @Transactional
-    public OrderResponse cancelByCustomer(Long userId, Long orderId, CancelReason reason) {
+    public OrderResponse cancelByCustomer(UUID userId, UUID orderId, CancelReason reason) {
         ShopOrder order = lock(orderId);
         if (!order.getUserId().equals(userId)) {
             throw new NotFoundException("Order " + orderId + " not found");
@@ -97,32 +92,32 @@ public class OrderService {
         }
         CancelReason effective = reason == null ? CancelReason.CHANGED_MIND : reason;
         if (!CUSTOMER_REASONS.contains(effective)) {
-            throw new BadRequestException("Reason must be one of " + CUSTOMER_REASONS);
+            throw new IllegalArgumentException("Reason must be one of " + CUSTOMER_REASONS);
         }
         applyStatus(order, OrderStatus.CANCELLED, effective);
         return toResponse(order);
     }
 
-    // ---------------- admin ----------------
 
-    /** SHIPPED, DELIVERED, REFUNDED, RETURNED, or CANCELLED. PAID only comes from the payment module. */
+
+
     @Transactional
-    public OrderResponse adminUpdateStatus(Long orderId, OrderStatus next, CancelReason reason) {
+    public OrderResponse adminUpdateStatus(UUID orderId, OrderStatus next, CancelReason reason) {
         if (next == OrderStatus.PAID || next == OrderStatus.PENDING) {
-            throw new BadRequestException("Status " + next + " cannot be set manually");
+            throw new IllegalArgumentException("Status " + next + " cannot be set manually");
         }
         if (next.requiresReason() && reason == null) {
-            throw new BadRequestException("A reason is required for status " + next);
+            throw new IllegalArgumentException("A reason is required for status " + next);
         }
         ShopOrder order = lock(orderId);
         applyStatus(order, next, reason);
         return toResponse(order);
     }
 
-    // ---------------- used by the payment module ----------------
+
 
     @Transactional(readOnly = true)
-    public OrderSummary getPayable(Long userId, Long orderId) {
+    public OrderSummary getPayable(UUID userId, UUID orderId) {
         ShopOrder order = orders.findByIdAndUserId(orderId, userId)
                 .orElseThrow(() -> new NotFoundException("Order " + orderId + " not found"));
         if (order.getStatus() != OrderStatus.PENDING) {
@@ -133,7 +128,7 @@ public class OrderService {
 
     /** Idempotent: calling it again for an already paid order does nothing. */
     @Transactional
-    public void markPaid(Long orderId) {
+    public void markPaid(UUID orderId) {
         ShopOrder order = lock(orderId);
         if (order.getStatus() == OrderStatus.PENDING) {
             applyStatus(order, OrderStatus.PAID, null);
@@ -143,9 +138,9 @@ public class OrderService {
         }
     }
 
-    // ---------------- internals ----------------
 
-    private ShopOrder lock(Long orderId) {
+
+    private ShopOrder lock(UUID orderId) {
         return orders.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new NotFoundException("Order " + orderId + " not found"));
     }
@@ -160,25 +155,21 @@ public class OrderService {
         if (next == OrderStatus.CANCELLED) {
             order.getItems().stream()
                     .sorted(Comparator.comparing((OrderItem i) -> i.getProduct().getId()))
-                    .forEach(i -> products.increaseStock(i.getProduct().getId(), i.getQuantity()));
+                    .forEach(i -> increaseStock(i.getProduct(), i.getQuantity()));
         }
+    }
 
-        EventType eventType = switch (next) {
-            case PAID -> EventType.PURCHASE;
-            case CANCELLED -> EventType.ORDER_CANCELLED;
-            case REFUNDED -> EventType.ORDER_REFUNDED;
-            case RETURNED -> EventType.ORDER_RETURNED;
-            default -> null;
-        };
-        if (eventType != null) {
-            for (OrderItem item : order.getItems()) {
-                Map<String, Object> meta = new HashMap<>();
-                meta.put("orderId", order.getId());
-                meta.put("quantity", item.getQuantity());
-                if (reason != null) meta.put("reason", reason.name());
-                events.record(order.getUserId(), item.getProduct().getId(), eventType, meta);
-            }
+    private void decreaseStock(Product product, int quantity) {
+        if (product.getStock() < quantity) {
+            throw new ConflictException("Insufficient stock for " + product.getName());
         }
+        product.setStock(product.getStock() - quantity);
+        productRepository.save(product);
+    }
+
+    private void increaseStock(Product product, int quantity) {
+        product.setStock(product.getStock() + quantity);
+        productRepository.save(product);
     }
 
     private OrderResponse toResponse(ShopOrder o) {
