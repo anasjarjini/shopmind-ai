@@ -52,9 +52,28 @@ public class JwtService {
     }
 
   
+    public Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        if (!username.equals(userDetails.getUsername()) || isTokenExpired(token)) {
+            return false;
+        }
+
+        if (userDetails instanceof com.shopmind.backend.entity.User user && user.getTokenInvalidBefore() != null) {
+            Date issuedAt = extractIssuedAt(token);
+            if (issuedAt != null) {
+                long issuedSeconds = issuedAt.getTime() / 1000;
+                long invalidBeforeSeconds = user.getTokenInvalidBefore().getEpochSecond();
+                if (issuedSeconds <= invalidBeforeSeconds) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private boolean isTokenExpired(String token) {

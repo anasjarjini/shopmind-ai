@@ -24,3 +24,11 @@ server:
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
   expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration-days: ${JWT_REFRESH_EXPIRATION_DAYS:14}
+
+cookie:
+  secure: ${COOKIE_SECURE:false}
+
+payment:
+  webhook-secret: ${PAYMENT_WEBHOOK_SECRET:shopmind-webhook-secret-dev}
+  mock-enabled: ${PAYMENT_MOCK_ENABLED:true}
