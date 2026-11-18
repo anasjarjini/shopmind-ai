@@ -1,10 +1,13 @@
-package com.shopmind.cart;
+package com.shopmind.backend.controller;
 
-import com.shopmind.auth.AuthPrincipal;
-import com.shopmind.cart.dto.AddCartItemRequest;
-import com.shopmind.cart.dto.CartResponse;
-import com.shopmind.cart.dto.UpdateCartItemRequest;
+import com.shopmind.backend.dto.AddCartItemRequest;
+import com.shopmind.backend.dto.CartResponse;
+import com.shopmind.backend.dto.UpdateCartItemRequest;
+import com.shopmind.backend.entity.User;
+import com.shopmind.backend.exception.UnauthorizedException;
+import com.shopmind.backend.service.CartService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -13,37 +16,49 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/cart")
 public class CartController {
 
-    private final CartService service;
-
-    public CartController(CartService service) {
-        this.service = service;
-    }
+    @Autowired
+    private CartService service;
 
     @GetMapping
-    public CartResponse get(@AuthenticationPrincipal AuthPrincipal p) {
-        return service.get(p.id());
+    public CartResponse get(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        return service.get(user.getId());
     }
 
     @PostMapping("/items")
     @ResponseStatus(HttpStatus.CREATED)
-    public CartResponse add(@AuthenticationPrincipal AuthPrincipal p, @Valid @RequestBody AddCartItemRequest req) {
-        return service.addItem(p.id(), req.productId(), req.quantity());
+    public CartResponse add(@AuthenticationPrincipal User user, @Valid @RequestBody AddCartItemRequest req) {
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        return service.addItem(user.getId(), req.productId(), req.quantity());
     }
 
     @PutMapping("/items/{productId}")
-    public CartResponse update(@AuthenticationPrincipal AuthPrincipal p, @PathVariable Long productId,
+    public CartResponse update(@AuthenticationPrincipal User user, @PathVariable Long productId,
                                @Valid @RequestBody UpdateCartItemRequest req) {
-        return service.setQuantity(p.id(), productId, req.quantity());
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        return service.setQuantity(user.getId(), productId, req.quantity());
     }
 
     @DeleteMapping("/items/{productId}")
-    public CartResponse remove(@AuthenticationPrincipal AuthPrincipal p, @PathVariable Long productId) {
-        return service.removeItem(p.id(), productId);
+    public CartResponse remove(@AuthenticationPrincipal User user, @PathVariable Long productId) {
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        return service.removeItem(user.getId(), productId);
     }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void clear(@AuthenticationPrincipal AuthPrincipal p) {
-        service.clear(p.id());
+    public void clear(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            throw new UnauthorizedException("Non authentifié");
+        }
+        service.clear(user.getId());
     }
 }

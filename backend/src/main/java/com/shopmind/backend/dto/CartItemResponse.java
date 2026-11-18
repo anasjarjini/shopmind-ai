@@ -1,4 +1,4 @@
-package com.shopmind.cart.dto;
+package com.shopmind.backend.dto;
 
 import java.math.BigDecimal;
 

@@ -1,4 +1,4 @@
-package com.shopmind.cart.dto;
+package com.shopmind.backend.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
