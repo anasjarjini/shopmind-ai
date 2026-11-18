@@ -1,9 +1,15 @@
+
+# API
 fastapi
 uvicorn
-pandas
-numpy
-scikit-learn
-psycopg2-binary
+
+# PostgreSQL
 sqlalchemy
+psycopg2-binary
+
+# AI Recommendation
+scikit-learn
+
+# Configuration
+pydantic-settings
 python-dotenv
-pydantic

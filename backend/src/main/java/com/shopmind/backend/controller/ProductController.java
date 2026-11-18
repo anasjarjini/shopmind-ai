@@ -1,6 +1,7 @@
 
 package com.shopmind.backend.controller;
 
+import com.shopmind.backend.dto.ProductCardResponse;
 import com.shopmind.backend.dto.ProductRequest;
 import com.shopmind.backend.dto.ProductResponse;
 import com.shopmind.backend.service.ProductService;
@@ -8,13 +9,16 @@ import com.shopmind.backend.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import com.shopmind.backend.dto.RecommendedProductResponse;
+import com.shopmind.backend.service.ProductRecommendationService;
 
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -22,51 +26,74 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductRecommendationService productRecommendationService;
 
-    // Récupérer tous les produits
     @GetMapping
-    public ResponseEntity<List<ProductResponse>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<Page<ProductCardResponse>> getProducts(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        return ResponseEntity.ok(productService.getProductCards(categoryId, page, size));
     }
 
 
-    // Récupérer un produit par son ID
+        @GetMapping("/{id}/recommendations")
+        public ResponseEntity<List<RecommendedProductResponse>>
+        getRecommendations(@PathVariable Long id,@RequestParam(defaultValue = "5") int limit,@RequestParam(defaultValue = "true")boolean sameCategory) {
+
+            return ResponseEntity.ok(
+                productRecommendationService.getRecommendations(id,limit,sameCategory)
+            );
+        }
+
+
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
 
-    // Rechercher les produits par nom
     @GetMapping("/search")
-    public ResponseEntity<List<ProductResponse>> searchProducts( @RequestParam String name) {
-        return ResponseEntity.ok(productService.searchProducts(name));
+    public ResponseEntity<Page<ProductCardResponse>> searchProducts(
+            @RequestParam String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        return ResponseEntity.ok(
+            productService.searchProductCards(name, page, size)
+        );
     }
 
-    // Récupérer les produits d'une catégorie
+
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<ProductResponse>> getProductsByCategory( @PathVariable Long categoryId) {
-        return ResponseEntity.ok(productService.getProductsByCategory(categoryId));
+    public ResponseEntity<Page<ProductCardResponse>> getProductsByCategory(
+            @PathVariable Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        return ResponseEntity.ok(productService.getProductCards(categoryId, page, size));
     }
 
 
-    // Créer un produit (ADMIN)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
-
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(request));
     }
 
 
-    // Modifier un produit (ADMIN)
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id,@Valid @RequestBody ProductRequest request) {
+    public ResponseEntity<ProductResponse> updateProduct(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductRequest request
+    ) {
         return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
-    // Supprimer un produit (ADMIN)
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {

@@ -41,21 +41,44 @@ services:
       SPRING_DATASOURCE_USERNAME: shopmind
       SPRING_DATASOURCE_PASSWORD: shopmind
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SHOPMIND_AI_BASE_URL: http://ai-service:8000
       JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       JWT_EXPIRATION: 86400000
     volumes:
       - ./backend/src:/app/src
       - ./backend/pom.xml:/app/pom.xml
 
+
+
   ai-service:
-    build: ./ai-service
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+
     ports:
       - "8000:8000"
+
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: shopmind
+      DATABASE_USER: shopmind
+      DATABASE_PASSWORD: shopmind
+
+    volumes:
+      - ./ai-service:/app
+
+    command: >
+      uvicorn main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app
+
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+
 
   frontend:
     build: ./frontend

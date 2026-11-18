@@ -1,20 +1,24 @@
 
 package com.shopmind.backend.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
+
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ProductRequest {
 
+    private String amazonAsin;
+
     @NotBlank(message = "Product name is required")
-    @Size(max = 255)
     private String name;
 
     private String description;
@@ -22,18 +26,32 @@ public class ProductRequest {
     @NotBlank(message = "Brand is required")
     private String brand;
 
+    private String store;
+
     @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.0", inclusive = false)
+    @DecimalMin(value = "0.01")
     private BigDecimal price;
 
-    @NotNull(message = "Stock is required")
-    @Min(value = 0)
-    private Integer stock;
+    @Builder.Default
+    @Min(0)
+    private Integer stock = 0;
 
-    private String imageUrl;
+    @Builder.Default
+    private Boolean active = true;
 
-    @NotNull(message = "Category is required")
-    private Long categoryId;
+    @NotBlank(message = "Category is required")
+    private String category;
 
-    private Boolean active;
+    @DecimalMin("0.0")
+    @DecimalMax("5.0")
+    private BigDecimal amazonRating;
+
+    @Min(0)
+    private Integer ratingCount;
+
+    private String dateFirstAvailable;
+
+    @NotNull(message = "Images are required")
+    @Size(min = 3, max = 3,message = "Product must have exactly 3 images")
+    private List<@NotNull @Valid ProductImageRequest> images;
 }
