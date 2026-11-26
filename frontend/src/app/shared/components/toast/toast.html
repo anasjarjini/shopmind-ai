@@ -1,0 +1,35 @@
+<!-- Toast container — fixed bottom-right, z-50 -->
+<div class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+
+  @for (toast of toasts(); track trackById($index, toast)) {
+    <div
+      class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg pointer-events-auto
+             border backdrop-blur-sm animate-[slideIn_0.25s_ease-out]"
+      [class]="toast.type === 'success' ? 'bg-green-50  border-green-200 text-green-800'
+             : toast.type === 'error'   ? 'bg-red-50    border-red-200   text-red-800'
+             :                            'bg-blue-50   border-blue-200  text-blue-800'"
+    >
+      <!-- Icon -->
+      <span class="shrink-0 mt-0.5 text-lg">
+        @if (toast.type === 'success') { ✅ }
+        @else if (toast.type === 'error') { ❌ }
+        @else { ℹ️ }
+      </span>
+
+      <!-- Message -->
+      <p class="text-sm font-medium flex-1">{{ toast.message }}</p>
+
+      <!-- Dismiss -->
+      <button (click)="dismiss(toast.id)"
+        class="shrink-0 opacity-50 hover:opacity-100 transition-opacity text-lg leading-none">&times;</button>
+    </div>
+  }
+
+</div>
+
+<style>
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+</style>
